@@ -17,16 +17,6 @@ TODO
 
 - Features
 
-	- Decide on weapon -> Theme: Unconvential Weapons
-		- Berries / Seeds / Fruits that grow randomly on planet
-			- Player must move over to the plant and eat then spit projectiles at enemies
-			- Stockpile berries for later use 
-			- Different berries have different effects - mines / slowing / dot / explosive
-
-		- Boomerang / Discus
-			- Use gravity of planet to create an orbit to knock away enemies
-
-
 		- Planet
 			- Jump to "push" planet away, avoid attacks and crush enemies
 
@@ -41,12 +31,16 @@ TODO
 		- Enemies
 		- Bullets
 
+	- Animations
+
 
 	- Sounds / Music
 
 
 
 - Extras
+
+	- Implement a polar coordinate system 
 
 	- Main menu
 
@@ -67,15 +61,6 @@ TODO
 	
 
 
-
-
-
-
-
-
-
-
-
 ]]
 
 function love.conf(t)
@@ -93,16 +78,46 @@ function love.load()
 	love.keyboard.setKeyRepeat(true)
 
 	--Planet initial details
-	planet = {x = love.window.getWidth() / 2, y = love.window.getHeight() / 2 ,radius = 50, health = 5, circ = 2 * math.pi * 20}
+	planet = {x = love.window.getWidth() / 2, 
+			  y = love.window.getHeight() / 2 ,
+			  radius = 100, health = 5, 
+			  circ = 2 * math.pi * 20, 
+			  texture = love.graphics.newImage("Planet.png"), 
+			  planetshift = false, 
+			  shiftframes = 10,
+			  incx = 0,
+			  incy = 0
+			}
 
 
 	--Player initial details
-	player = {posangle = 180, rotangle = 0, x = planet.x, y = planet.y - planet.radius, height = 15, width = 15, speed = 3}
+	player = {posangle = 270, rotangle = 0, 
+	x = planet.x, 
+	y = planet.y - planet.radius, 
+	height = 40, width = 20, 
+	speed = 5, 
+	texture = love.graphics.newImage("PlayerU.png"), 
+	up = false, 
+	down = false, 
+	jumpframes = 20,
+	incx = 0,
+	incy = 0}
+
+
+
+
+
 	calcPlayerPosition()
 
 
-	--Player shots
-	playerProjectiles = {}
+	--Offset ranges
+	posx = love.window.getWidth() -- 1/2 windowwidth -> windowwidth x+
+	posy = 0 -- 1/2 windowheight -> 0 y+
+	negx = 0
+	negy = love.window.getHeight()	
+	
+	--current direction
+
 
 	--Enemy shots (?)
 
@@ -117,12 +132,14 @@ end
 --Every frame
 function love.update(dt)
 
+	--Handle player/planet movement
+	jump()
+	shiftplanet()
 
 	--Handle enemy movement
 	updateEnemies()
 
 	--Handle projectiles
-	updateProjectiles()
 
 	--Handle x/y/z
 
@@ -134,56 +151,83 @@ end
 function love.keypressed(key, isrepeat)
 
 
-	if key == "a" then
+	if key == "a" and player.up == false and player.down == false then
 		player.posangle = player.posangle + player.speed
 		calcPlayerPosition()
 	end
 
-	if key == "d" then
+	if key == "d" and player.up == false and player.down == false then
 		player.posangle = player.posangle - player.speed
 		calcPlayerPosition()
 	end
 
-	--Ammo types
+	if key == "w" then
+
+		if player.up == false and player.down == false then
 
 
-end	
+	--Ranges for each angle
+	if(player.posangle >= 338 or player.posangle < 23) then -- 0 - wrapping around so use OR
+		player.incx = 0
+		player.incy = -1
+		love.graphics.print("JUMP!", 100, 100)
+	elseif(player.posangle >= 23 and player.posangle < 68) then -- 45
+		player.incx = - 1
+		player.incy = -1	
+	elseif(player.posangle >= 68 and player.posangle < 113) then -- 90
+		player.incx = -1		
+		player.incy = 0
+	elseif(player.posangle >= 113 and player.posangle < 158) then -- 135
+		player.incy = 1
+		player.incx = -1
+	elseif(player.posangle >= 158 and player.posangle < 203) then --180
+		player.incy = 1
+		player.incx = 0	
+	elseif(player.posangle >= 203 and player.posangle < 248) then --225
+		player.incx = 1
+		player.incy = 1
+	elseif(player.posangle >= 248 and player.posangle < 293) then --270
+		player.incx = 1
+		player.incy = 0	
+	elseif(player.posangle >= 293 and player.posangle < 338) then --315
+		player.incx =  1
+		player.incy = -1
+	end
 
 
---Mouse handling
-function love.mousepressed(x,y, button)
 
+			player.up = true
+		end
 
-	if button == "l" then
-
-		playerFire(x,y)
 
 	end
 
-end
+
+
+
+end	
 
 
 
 
 function love.draw()
 
+	love.graphics.print(player.posangle,0,0)
 
-	--Draw projectiles
-	drawProjectiles()
+
+
 
 	--Draw enemies
 	drawEnemies()
 
+
 	--Draw planet
-	love.graphics.setColor(0,255,0)
-	love.graphics.circle("fill", planet.x, planet.y, planet.radius, 350)
-
-
+	love.graphics.draw(planet.texture, planet.x - (planet.radius), planet.y - (planet.radius))
 
 	--Draw player last due to rotations
-	love.graphics.setColor(0,0,255)
 	calcPlayerRotation()
-	love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
+	love.graphics.draw(player.texture, player.x, player.y)
+	--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
 
 
 
@@ -221,72 +265,6 @@ function calcPlayerRotation()
 	love.graphics.translate(-player.x, -player.y)
 end
 
-
-function playerFire(x,y)
-
-	--Create a new projectile, with a start location (player and end destination (mouse)
-	table.insert(playerProjectiles,{x = player.x, y = player.y, endx = x, endy = y, shotspeed = 1, cleanup = false})
-
-
-
-end
-
-
-function updateProjectiles()
-
-
-	for i, shot in pairs(playerProjectiles) do
-
-
-		--Rewrite this
-
-		if(shot.x < shot.endx) then
-			shot.x = shot.x + shot.shotspeed
-		elseif (shot.x > shot.endx) then
-			shot.x = shot.x - shot.shotspeed
-		end
-
-		if(shot.y < shot.endy) then
-			shot.y = shot.y + shot.shotspeed
-		elseif (shot.y > shot.endy) then
-			shot.y = shot.y - shot.shotspeed
-		end
-
-		if(shot.x >= shot.endx and shot.y >= shot.endy) then
-			shot.cleanup = true	
-		end
-
-
-
-
-	end
-
-	--For shot in enemy projectiles
-
-
-end	
-
-
-
-function drawProjectiles()
-
-	for i, shot in pairs(playerProjectiles) do
-
-		love.graphics.setColor(255,0,0)
-		love.graphics.circle("fill", shot.x, shot.y, 3, 5)
-
-		--If clean up - draw explode / effect instead
-		if(shot.cleanup) then
-			love.graphics.setColor(0,255,0)
-			love.graphics.circle("fill", shot.x, shot.y, 3, 5)
-			table.remove(playerProjectiles, i)
-		end
-
-
-	end
-
-
-end
 
 
 function updateEnemies()
@@ -354,16 +332,88 @@ function updateEnemies()
 end
 
 
+
+function jump()
+
+	--Need to check where on circle jumping from - movement in 8 directions
+	-- Need to check if planet is moving, end landing early so we don't fall through
+
+	--Jump up until frames = 0
+	if player.up then
+		player.y = player.y - player.incy
+		player.x = player.x - player.incx
+		player.jumpframes = player.jumpframes - 1
+
+		if player.jumpframes == 0 then
+			player.up = false
+			player.down = true
+		end
+	elseif player.down then
+
+
+
+
+		player.y = player.y + player.incy
+		player.x = player.x + player.incx
+		player.jumpframes = player.jumpframes + 1
+
+		if player.jumpframes == 20 then
+			player.down = false
+
+			--Landed
+			--Shift planet & player
+			planet.incx = player.incx
+			planet.incy = player.incy
+
+			planet.planetshift = true
+		end
+	end
+end
+
+
+function shiftplanet()
+
+	if planet.planetshift then
+
+		planet.shiftframes = planet.shiftframes - 1;
+
+		--will need to check which side jump came from and determine angle!
+		planet.x = planet.x + planet.incx
+		planet.y = planet.y + planet.incy
+		player.y = player.y + planet.incy
+		player.x = player.x + planet.incx
+
+		if(planet.frames == 0) then
+
+			planet.planetshift = false
+			planet.shiftframes = 10
+		end
+
+	end
+
+
+
+
+end
+
+
+
+
+
+
+
+
+
+
+
 function drawEnemies()
 
 for i, enemy in pairs(enemies) do
 
-		love.graphics.setColor(125,125,0)
 		love.graphics.circle("fill", enemy.x, enemy.y, 3, 5)
 
 		--If clean up - draw explode / effect instead
 		if(enemy.cleanup) then
-			love.graphics.setColor(0,255,0)
 			love.graphics.circle("fill", enemy.x, enemy.y, 3, 5)
 			table.remove(enemies, i)
 		end
@@ -371,7 +421,12 @@ for i, enemy in pairs(enemies) do
 
 	end
 
+end
 
 
 
+
+
+function hitDetection()
+-- Enemy bullets against player / planet (?)
 end
