@@ -80,7 +80,7 @@ function love.load()
 	--Planet initial details
 	planet = {x = love.window.getWidth() / 2, 
 			  y = love.window.getHeight() / 2 ,
-			  radius = 100, health = 5, 
+			  radius = 50, health = 5, 
 			  circ = 2 * math.pi * 20, 
 			  texture = love.graphics.newImage("Planet.png"), 
 			  planetshift = false, 
