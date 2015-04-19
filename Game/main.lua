@@ -142,7 +142,8 @@ function love.update(dt)
 		findSegment()
 		
 		player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
-	
+
+
 		if(player.up) then
 			--move player up (reverse inc vals)	
 			player.y = player.y - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
@@ -187,7 +188,7 @@ end
 function love.keypressed(key, isrepeat)
 
 
-	if key == "a" and right == false and player.speed > -player.speedcap  then
+	if key == "a" and right == false and player.speed > -player.speedcap and player.speed <= 0  then
 		player.speed = player.speed - 5
 		left = true
 		right = false
@@ -197,7 +198,7 @@ function love.keypressed(key, isrepeat)
 		decel = 0
 	end
 
-	if key == "d" and left == false and player.speed < player.speedcap then
+	if key == "d" and left == false and player.speed < player.speedcap  and player.speed >= 0 then
 		left = false
 		right = true
 		player.speed = player.speed + 5
@@ -221,13 +222,11 @@ function love.keyreleased(key)
 
 	--Jump off
 	if(key == "a" and left == true and right == false) then
-		player.speed = player.speed + 5
 		decel = 1
 		left = false
 	end
 
 	if(key == "d" and left == false and right == true) then
-		player.speed = player.speed - 5
 		decel = -1
 		right = false
 	end
@@ -262,6 +261,8 @@ end
 function love.draw()
 
 	love.graphics.print(player.posangle,0,0)
+
+	love.graphics.print(player.speed,0,10)
 
 
 	--Draw enemies
