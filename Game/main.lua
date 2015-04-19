@@ -117,6 +117,13 @@ function love.load()
 	pdisty = 0
 	distance = 0
 	--current direction
+	left = false
+	right = false
+	jump = false
+
+
+	--jump dist
+	maxheight = 2 * planet.radius
 
 	--Enemy shots (?)
 
@@ -179,15 +186,19 @@ end
 function love.keypressed(key, isrepeat)
 
 
-	if key == "a" and player.speed > -player.speedcap  then
+	if key == "a" and right == false and player.speed > -player.speedcap  then
 		player.speed = player.speed - 5
+		left = true
+		right = false
 		if(player.speed < -player.speedcap) then
 			player.speed = -player.speedcap
 		end
 		decel = 0
 	end
 
-	if key == "d" and player.speed < player.speedcap then
+	if key == "d" and left == false and player.speed < player.speedcap then
+		left = false
+		right = true
 		player.speed = player.speed + 5
 		if(player.speed > player.speedcap) then
 			player.speed = player.speedcap
@@ -195,21 +206,6 @@ function love.keypressed(key, isrepeat)
 		decel = 0
 	end
 
-	if key == "w" then
-
-		player.charging = true
-		if(player.chargerate < 100) then
-			player.chargerate = player.chargerate + 5
-		end
-	end
-
-	if key == "s" then
-
-		player.charging = true
-		if(player.chargerate < 100) then
-			player.chargerate = player.chargerate + 5
-		end
-	end
 
 end	
 
@@ -217,14 +213,16 @@ end
 function love.keyreleased(key)
 
 	--Jump off
-	if(key == "a") then
+	if(key == "a" and left == true and right == false) then
 		player.speed = player.speed + 5
 		decel = 1
+		left = false
 	end
 
-	if(key == "d") then
+	if(key == "d" and left == false and right == true) then
 		player.speed = player.speed - 5
 		decel = -1
+		right = false
 	end
 
 	if(key == "w") then
@@ -241,6 +239,7 @@ function love.keyreleased(key)
 			player.down = false	
 			player.chargerate = 0
 			player.charging = false
+			jump = true
 		end
 		
 	end
@@ -248,17 +247,7 @@ function love.keyreleased(key)
 	--Slam back down
 	if(key == "s") then
 		
-		if(player.down == false and player.up == true) then
-
-			player.jumpmultiplier = player.chargerate / 2
-
-		
-			player.up = false
-			player.down = true
-			player.chargerate = 0
-			player.charging = false
-		end
-		
+			
 		--Set down to false --
 	end
 
@@ -460,8 +449,19 @@ end
 
 function hitDetection()
 
+
+	--If jump apex reached - start to fall
+	if(distance >= maxheight) then
+
+		player. up = false
+		player.down = true	
+
+	end
+
+	--Start of jump - give some tolerance to clear planet
+
 	--land player back on planet
-	if( (player.down or player.up) and distance <= planet.radius) then
+	if( (player.down) and (distance) <= planet.radius) then
 		
 		--If player was falling push back on planet, else catch player
 		if(player.down) then
@@ -471,7 +471,7 @@ function hitDetection()
 		
 		--Complete jump
 		player.down = false
-		player.up = false
+		--player.up = false
 		
 	end
 
