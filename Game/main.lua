@@ -168,7 +168,7 @@ function love.update(dt)
 		end
 	
 		--Handle enemy movement
-		updateEnemies()
+		updateEnemies(dt)
 		
 
 		--Handle projectiles
@@ -262,7 +262,8 @@ function love.draw()
 	love.graphics.print(player.posangle,0,0)
 
 	love.graphics.print(player.speed,0,10)
-
+	
+	love.graphics.print(#enemies, 0, 20)
 
 	--Draw enemies
 	drawEnemies()
@@ -329,10 +330,10 @@ end
 
 
 
-function updateEnemies()
+function updateEnemies(dt)
 
 	--How many enemies are currently in the game - use a timer system instead
-	if(#enemies < 3) then	
+	if(#enemies < 4) then	
 
 
 	--Generate another?
@@ -341,49 +342,56 @@ function updateEnemies()
 		plusmin = math.random(0,1)
 
 		if(plusmin == 0) then
-			enemyx = planet.x + math.random(2 * planet.radius, love.window.getWidth())
+			enemyx = planet.x + planet.radius + planet.radius
 		else
-			enemyx = planet.x - math.random(2 * planet.radius, love.window.getWidth())
+			enemyx = planet.x - planet.radius + planet.radius
 		end
 
 		plusmin = math.random(0,1)
 
 		if(plusmin == 0) then
-			enemyy = planet.y + math.random(2 * planet.radius, love.window.getHeight())
+			enemyy = planet.y + planet.radius + planet.radius
 		else
-			enemyy = planet.y - math.random(2 * planet.radius, love.window.getHeight())
+			enemyy = planet.y - planet.radius + planet.radius
 		end
 
+		plusmin = math.random(0,2)
+		
+		if(plusmin == 0) then
+			enemyincy = -25
+		elseif(plusmin == 1) then
+			enemyincy = 0
+		else
+			enemyincy = 25
+		end
+		
+		plusmin = math.random(0,2)
+		
+		if(plusmin == 0) then
+			enemyincx = -25
+		elseif(plusmin == 1) then
+			enemyincx = 0
+		else
+			enemyincx = 25
+		end
+		
+		if(enemyincx == 0 and enemyincy == 0) then
+			enemyincx = 25
+		end
 
-		table.insert(enemies, {x = enemyx, y = enemyy, endx = planet.x, endy = planet.y, speed = 3, cleanup = false})
-
+		table.insert(enemies, {x = enemyx, y = enemyy, incx = enemyincx, incy = enemyincy, speed = 3, cleanup = false})
+		
 	end
-
 	--Update positions
-
 	for i, enemy in pairs(enemies) do
 
 
-		--Rewrite this
+		enemy.x = enemy.x + (enemy.incx * dt)
+		enemy.y = enemy.y + (enemy.incy * dt)		
 
-		if(enemy.x < enemy.endx) then
-			enemy.x = enemy.x + enemy.speed
-		elseif (enemy.x > enemy.endx) then
-			enemy.x = enemy.x - enemy.speed
-		end
-
-		if(enemy.y < enemy.endy) then
-			enemy.y = enemy.y + enemy.speed
-		elseif (enemy.y > enemy.endy) then
-			enemy.y = enemy.y - enemy.speed
-		end
-
-
-		if(enemy.x >= enemy.endx and enemy.y >= enemy.endy) then
-			enemy.cleanup = true	
-		end
 
 	end
+
 
 end
 
@@ -391,6 +399,8 @@ function drawEnemies()
 
 for i, enemy in pairs(enemies) do
 
+		love.graphics.print(enemy.x, 50, 10)
+		love.graphics.print(enemy.y, 50, 20)
 		love.graphics.circle("fill", enemy.x, enemy.y, 3, 5)
 
 		--If clean up - draw explode / effect instead
@@ -486,5 +496,51 @@ function hitDetection()
 
 		planet.incy = - planet.incy
 	end
+	
+
+	-- Get the widths of the enemies
+	for i, enemy in pairs(enemies) do
+
+
+		plusmin = math.random(0,2)
+		
+		if(plusmin == 0) then
+			enemyincy = -25
+		elseif(plusmin == 1) then
+			enemyincy = 0
+		else
+			enemyincy = 25
+		end
+		
+		plusmin = math.random(0,2)
+		
+		if(plusmin == 0) then
+			enemyincx = -25
+		elseif(plusmin == 1) then
+			enemyincx = 0
+		else
+			enemyincx = 25
+		end
+
+		if(enemyincx == 0 and enemyincy == 0) then
+			enemyincx = 25
+		end
+
+
+		if(enemy.x < 0 or enemy.x > love.window.getWidth()) then
+
+			enemy.incx = enemyincx
+		end
+
+
+		if(enemy.y  < 0 or enemy.y > love.window.getHeight()) then
+
+			enemy.incy = enemyincy
+		end
+		
+
+
+	end
 
 end
+
