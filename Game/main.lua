@@ -89,25 +89,19 @@ function love.load()
 	player = {posangle = 270, rotangle = 0, 
 			  x = planet.x, 
 			  y = planet.y - planet.radius, 
-			  height = 40, width = 20, 
-			  speed = 0, speedcap = 50,
+			  speed = 0, speedcap = 200,
 			  texture = love.graphics.newImage("PlayerU.png"), 
 			  up = false, 
 			  down = false, 
-			  jumpframes = 20,
 			  incx = 0,
 			  incy = 0,
-			  incxsign = 0,
-			  incysign = 0,
-			  chargerate = 5,
-			  jumpmultiplier = 5,
-			  dropmultiplier = 5,
-			  weight = 50,
+			  jumpmultiplier = 10,
+			  dropmultiplier = 10,
 			  charging = false}
 
 	calcPlayerPosition()
 
-	planetinertia = 10
+	planetinertia = 30
 
 	decel = 0
 
@@ -122,7 +116,7 @@ function love.load()
 
 
 	--jump dist
-	maxheight = planet.radius + planet.radius
+	maxheight = planet.radius + (planet.radius * 0.5)
 
 	--Enemy shots (?)
 
@@ -137,6 +131,7 @@ end
 --Every frame
 function love.update(dt)	
 		
+
 		--Determine where player lies in relation to planet
 		--Update player segment location as they move around the planet
 		findSegment()
@@ -149,13 +144,15 @@ function love.update(dt)
 			player.y = player.y - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
 			player.x = player.x - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
 
-	
 			jumpticks = jumpticks + 1
+
 
 		elseif(player.down) then
 			--move player down (reverse inc vals)
 			player.y = player.y + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
 			player.x = player.x + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
+
+
 		end
 
 		--Determine player position
@@ -173,8 +170,10 @@ function love.update(dt)
 		--Handle enemy movement
 		updateEnemies()
 		
+
 		--Handle projectiles
 		hitDetection()
+
 
 	--Handle x/y/z
 
@@ -189,7 +188,7 @@ function love.keypressed(key, isrepeat)
 
 
 	if key == "a" and right == false and player.speed > -player.speedcap and player.speed <= 0  then
-		player.speed = player.speed - 5
+		player.speed = player.speed - 10
 		left = true
 		right = false
 		if(player.speed < -player.speedcap) then
@@ -201,7 +200,7 @@ function love.keypressed(key, isrepeat)
 	if key == "d" and left == false and player.speed < player.speedcap  and player.speed >= 0 then
 		left = false
 		right = true
-		player.speed = player.speed + 5
+		player.speed = player.speed + 10
 		if(player.speed > player.speedcap) then
 			player.speed = player.speedcap
 		end
@@ -222,12 +221,12 @@ function love.keyreleased(key)
 
 	--Jump off
 	if(key == "a" and left == true and right == false) then
-		decel = 1
+		decel = 5
 		left = false
 	end
 
 	if(key == "d" and left == false and right == true) then
-		decel = -1
+		decel = -5
 		right = false
 	end
 
@@ -296,10 +295,19 @@ function calcPlayerPosition()
 		player.posangle = 0 + (player.posangle % 360)
 	end
 
+
+
+
 	--get player distance from planet
 	pdistx = math.abs(player.x - (planet.x))
 	pdisty = math.abs(player.y - (planet.y))
 	distance = math.sqrt( (pdistx * pdistx) + (pdisty * pdisty))
+
+
+	--Check if player is inside planet, move outwards if so
+	if(distance < planet.radius) then
+		distance = planet.radius
+	end
 
 	
 	--Rotate about origin around a circle with radius of distance - total player distance from planet centre
@@ -447,18 +455,19 @@ function hitDetection()
 
 
 	--land player back on planet
-	if( (player.down or (player.up)) and (distance) <= planet.radius) then
+	if( (player.down or (player.up and jumpticks > 1)) and (distance) <= planet.radius) then
 		
 		--If player was falling push back on planet, else catch player
 		if(player.down) then
 			planet.incx = planet.incx + player.incx
-			planet.incy = planet.incx + player.incy
+			planet.incy = planet.incy + player.incy
 		end
 		
 		--Complete jump
 		player.down = false
 		player.up = false
 		jumpticks = 0
+
 		
 	end
 
