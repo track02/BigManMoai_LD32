@@ -58,10 +58,7 @@ TODO
 - Code Cleanup
 
 	- Split into smaller classes / oop approach
-	
-
-
-]]
+	]]
 
 function love.conf(t)
 
@@ -103,7 +100,8 @@ function love.load()
 			  incxsign = 0,
 			  incysign = 0,
 			  chargerate = 5,
-			  jumpmultiplier = 0,
+			  jumpmultiplier = 5,
+			  dropmultiplier = 5,
 			  weight = 50,
 			  charging = false}
 
@@ -119,11 +117,12 @@ function love.load()
 	--current direction
 	left = false
 	right = false
-	jump = false
+	jumpticks = 0
+
 
 
 	--jump dist
-	maxheight = 2 * planet.radius
+	maxheight = planet.radius + planet.radius
 
 	--Enemy shots (?)
 
@@ -136,8 +135,7 @@ function love.load()
 end
 
 --Every frame
-function love.update(dt)
-	
+function love.update(dt)	
 		
 		--Determine where player lies in relation to planet
 		--Update player segment location as they move around the planet
@@ -147,12 +145,16 @@ function love.update(dt)
 	
 		if(player.up) then
 			--move player up (reverse inc vals)	
-			player.y = player.y - (dt * (player.incy * player.jumpmultiplier))  
-			player.x = player.x - (dt * (player.incx * player.jumpmultiplier))
+			player.y = player.y - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
+			player.x = player.x - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
+
+	
+			jumpticks = jumpticks + 1
+
 		elseif(player.down) then
 			--move player down (reverse inc vals)
-			player.y = player.y + (dt * (player.incy * player.jumpmultiplier))
-			player.x = player.x + (dt * (player.incx * player.jumpmultiplier))
+			player.y = player.y + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
+			player.x = player.x + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
 		end
 
 		--Determine player position
@@ -162,14 +164,13 @@ function love.update(dt)
 		planet.x = planet.x + (dt * planet.incx)
 		planet.y = planet.y + (dt * planet.incy)
 		--Player too if he's not jumping off planet
-		if(player.up == false and player.down == false) then
+		if (player.up and player.down == false) or (player.up == false and player.down == false) then
 				player.x = player.x + (dt * planet.incx)
 				player.y = player.y + (dt * planet.incy)
 		end
 	
 		--Handle enemy movement
 		updateEnemies()
-
 		
 		--Handle projectiles
 		hitDetection()
@@ -206,6 +207,12 @@ function love.keypressed(key, isrepeat)
 		decel = 0
 	end
 
+	if key == "s" and player.down then
+
+		player.down = true
+		player.up = false
+	end
+
 
 end	
 
@@ -233,22 +240,18 @@ function love.keyreleased(key)
 		--One jump at a time
 		if player.down == false and player.up == false then
 		
-			player.jumpmultiplier = player.chargerate / 2
-		
 			player.up = true
 			player.down = false	
-			player.chargerate = 0
-			player.charging = false
 			jump = true
 		end
 		
 	end
 
 	--Slam back down
-	if(key == "s") then
-		
-			
+	if(key == "s" and player.up == true) then
 		--Set down to false --
+		player.down = true
+		player.up = false
 	end
 
 end
@@ -343,10 +346,7 @@ function updateEnemies()
 		end
 
 
-
 		table.insert(enemies, {x = enemyx, y = enemyy, endx = planet.x, endy = planet.y, speed = 3, cleanup = false})
-
-
 
 	end
 
@@ -374,25 +374,9 @@ function updateEnemies()
 			enemy.cleanup = true	
 		end
 
-
 	end
 
-
-
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function drawEnemies()
 
@@ -441,7 +425,6 @@ function findSegment()
 				player.incy = planetinertia
 			end
 
-
 end
 
 
@@ -460,8 +443,10 @@ function hitDetection()
 
 	--Start of jump - give some tolerance to clear planet
 
+
+
 	--land player back on planet
-	if( (player.down) and (distance) <= planet.radius) then
+	if( (player.down or (player.up)) and (distance) <= planet.radius) then
 		
 		--If player was falling push back on planet, else catch player
 		if(player.down) then
@@ -471,7 +456,8 @@ function hitDetection()
 		
 		--Complete jump
 		player.down = false
-		--player.up = false
+		player.up = false
+		jumpticks = 0
 		
 	end
 
