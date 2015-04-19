@@ -74,7 +74,6 @@ end
 
 function love.load()
 
-
 	love.keyboard.setKeyRepeat(true)
 
 	--Planet initial details
@@ -89,13 +88,12 @@ function love.load()
 			  incy = 0
 			}
 
-
 	--Player initial details
 	player = {posangle = 270, rotangle = 0, 
 			  x = planet.x, 
 			  y = planet.y - planet.radius, 
 			  height = 40, width = 20, 
-			  speed = 0, 
+			  speed = 0, speedcap = 50,
 			  texture = love.graphics.newImage("PlayerU.png"), 
 			  up = false, 
 			  down = false, 
@@ -105,21 +103,20 @@ function love.load()
 			  incxsign = 0,
 			  incysign = 0,
 			  chargerate = 5,
-			  jumpcharge = 0,
-			  fallcharge = 0,
+			  jumpmultiplier = 0,
 			  weight = 50,
 			  charging = false}
 
-
 	calcPlayerPosition()
-
 
 	planetinertia = 10
 
 	decel = 0
 
+	pdistx = 0
+	pdisty = 0
+	distance = 0
 	--current direction
-
 
 	--Enemy shots (?)
 
@@ -133,61 +130,48 @@ end
 
 --Every frame
 function love.update(dt)
-
 	
-
-	--Player is on planet surface
-	if(player.up == false and player.down == false) then
-		player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
-		calcPlayerPosition()
-
-
-	elseif(player.down == false and player.up == true) then
-
-		player.posangle = player.posangle + (player.speed * dt)
-
-		--move player up (reverse inc vals)	
-		player.y = player.y - (dt * player.incy)  
-		player.x = player.x - (dt * player.incx)
 		
-		--move player along ('orbit' planet)
-		player.y = player.y + (dt * player.speed)  
-		player.x = player.x + (dt * player.speed)
-
-	-- 
-
-
-	elseif(player.down == true and player.up == false) then
-
-
-		--move player down (reverse inc vals)	
-		player.y = player.y + (dt * player.incy) 
-		player.x = player.x + (dt * player.incx)
-
-
-
-
-	end
-
-
-	planet.x = planet.x + (dt * planet.incx)
-	planet.y = planet.y + (dt * planet.incy)
+		--Determine where player lies in relation to planet
+		--Update player segment location as they move around the planet
+		findSegment()
+		
+		player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
 	
+		if(player.up) then
+			--move player up (reverse inc vals)	
+			player.y = player.y - (dt * (player.incy * player.jumpmultiplier))  
+			player.x = player.x - (dt * (player.incx * player.jumpmultiplier))
+		elseif(player.down) then
+			--move player down (reverse inc vals)
+			player.y = player.y + (dt * (player.incy * player.jumpmultiplier))
+			player.x = player.x + (dt * (player.incx * player.jumpmultiplier))
+		end
 
-	--Handle enemy movement
-	updateEnemies()
+		--Determine player position
+		calcPlayerPosition()
+		
+		--Shift planet
+		planet.x = planet.x + (dt * planet.incx)
+		planet.y = planet.y + (dt * planet.incy)
+		--Player too if he's not jumping off planet
+		if(player.up == false and player.down == false) then
+				player.x = player.x + (dt * planet.incx)
+				player.y = player.y + (dt * planet.incy)
+		end
+	
+		--Handle enemy movement
+		updateEnemies()
 
-	--Handle projectiles
-	hitDetection()
+		
+		--Handle projectiles
+		hitDetection()
 
 	--Handle x/y/z
 
 	if decel ~= 0 and player.speed ~= 0 then
 		player.speed = player.speed + decel
 	end
-
-
-
 end
 
 
@@ -195,28 +179,36 @@ end
 function love.keypressed(key, isrepeat)
 
 
-	if key == "a"  then
-		player.speed = player.speed + 5
+	if key == "a" and player.speed > -player.speedcap  then
+		player.speed = player.speed - 5
+		if(player.speed < -player.speedcap) then
+			player.speed = -player.speedcap
+		end
 		decel = 0
 	end
 
-	if key == "d"  then
-		player.speed = player.speed - 5
+	if key == "d" and player.speed < player.speedcap then
+		player.speed = player.speed + 5
+		if(player.speed > player.speedcap) then
+			player.speed = player.speedcap
+		end
 		decel = 0
 	end
 
 	if key == "w" then
 
 		player.charging = true
-		player.chargerate = player.chargerate + 5
-
+		if(player.chargerate < 100) then
+			player.chargerate = player.chargerate + 5
+		end
 	end
 
 	if key == "s" then
 
 		player.charging = true
-		player.chargerate = player.chargerate + 5
-
+		if(player.chargerate < 100) then
+			player.chargerate = player.chargerate + 5
+		end
 	end
 
 end	
@@ -225,71 +217,49 @@ end
 function love.keyreleased(key)
 
 	--Jump off
-
 	if(key == "a") then
-		player.speed = player.speed - 5
-		decel = -1
-	end
-
-	if(key == "d") then
 		player.speed = player.speed + 5
 		decel = 1
 	end
 
+	if(key == "d") then
+		player.speed = player.speed - 5
+		decel = -1
+	end
 
 	if(key == "w") then
 
-		--If not jumping or falling 
+	--If not jumping or falling 
 		love.graphics.print("JUMP!", 100, 100)
 
-
+		--One jump at a time
 		if player.down == false and player.up == false then
-
-		--Find direction to move off in
-			if(player.posangle >= 338 or player.posangle < 23) then -- 0 - wrapping around so use OR
-				player.incx = 0
-				player.incy = -planetinertia
-			elseif(player.posangle >= 23 and player.posangle < 68) then -- 45
-				player.incx = - planetinertia
-				player.incy = -planetinertia	
-			elseif(player.posangle >= 68 and player.posangle < 113) then -- 90
-				player.incx = -planetinertia		
-				player.incy = 0
-			elseif(player.posangle >= 113 and player.posangle < 158) then -- 135
-				player.incy = planetinertia
-				player.incx = -planetinertia
-			elseif(player.posangle >= 158 and player.posangle < 203) then --180
-				player.incy = planetinertia
-				player.incx = 0	
-			elseif(player.posangle >= 203 and player.posangle < 248) then --225
-				player.incx = planetinertia
-				player.incy = planetinertia
-			elseif(player.posangle >= 248 and player.posangle < 293) then --270
-				player.incx = planetinertia
-				player.incy = 0	
-			elseif(player.posangle >= 293 and player.posangle < 338) then --315
-				player.incx =  planetinertia
-				player.incy = -planetinertia
-			end
-
-		end
+		
+			player.jumpmultiplier = player.chargerate / 2
+		
 			player.up = true
-			player.down = false
+			player.down = false	
+			player.chargerate = 0
+			player.charging = false
+		end
+		
 	end
-
-
-
-	player.charging = false
-
-
-
 
 	--Slam back down
 	if(key == "s") then
+		
+		if(player.down == false and player.up == true) then
 
-		player.up = false
-		player.down = true
-		player.charging = false
+			player.jumpmultiplier = player.chargerate / 2
+
+		
+			player.up = false
+			player.down = true
+			player.chargerate = 0
+			player.charging = false
+		end
+		
+		--Set down to false --
 	end
 
 end
@@ -300,11 +270,6 @@ end
 function love.draw()
 
 	love.graphics.print(player.posangle,0,0)
-
-	love.graphics.print(player.x,0,20)
-	love.graphics.print(player.y,0,30)
-
-
 
 
 	--Draw enemies
@@ -335,13 +300,19 @@ function calcPlayerPosition()
 	end
 
 	if(player.posangle > 360) then
-		player.posangle = 0 + (player.posangle - 360)
+		player.posangle = 0 + (player.posangle % 360)
 	end
 
-	--Top Left Point at position angle on circle circumference 
-	player.x = (planet.x + (planet.radius) * math.sin(player.posangle * 0.01745)) 
-	player.y = (planet.y + (planet.radius) * math.cos(player.posangle * 0.01745))
+	--get player distance from planet
+	pdistx = math.abs(player.x - (planet.x))
+	pdisty = math.abs(player.y - (planet.y))
+	distance = math.sqrt( (pdistx * pdistx) + (pdisty * pdisty))
+
 	
+	--Rotate about origin around a circle with radius of distance - total player distance from planet centre
+	player.x =  (planet.x) + (distance * math.cos(player.posangle * 0.01745))
+	player.y =  (planet.y) + (distance * math.sin(player.posangle * 0.01745))
+
 
 	--This is the position of the top left point of the rectangle
 	--Rotate coordinates as player moves around the planet
@@ -350,9 +321,9 @@ function calcPlayerPosition()
 end
 
 function calcPlayerRotation()
-	love.graphics.translate(player.x, player.y)
-	love.graphics.rotate(-(player.posangle * 0.01745))
-	love.graphics.translate(-player.x, -player.y)
+	love.graphics.translate(player.x, player.y) -- translate to origin
+	love.graphics.rotate(((player.posangle - 90) * 0.01745)) -- rotate
+	love.graphics.translate(-player.x, -player.y) -- translate back
 end
 
 
@@ -424,18 +395,6 @@ end
 
 
 
-function shiftplanet()
-
-
-		--will need to check which side jump came from and determine angle!
-		planet.x = planet.x + planet.incx
-		planet.y = planet.y + planet.incy
-		player.y = player.y + planet.incy
-		player.x = player.x + planet.incx
-
-
-end
-
 
 
 
@@ -463,11 +422,59 @@ for i, enemy in pairs(enemies) do
 
 end
 
+function findSegment()
+
+
+		--Find direction to move off in
+			if(player.posangle >= 338 or player.posangle < 23) then -- 0 - wrapping around so use OR
+				player.incx = -planetinertia
+				player.incy = 0
+			elseif(player.posangle >= 23 and player.posangle < 68) then -- 45
+				player.incx = -planetinertia
+				player.incy = -planetinertia	
+			elseif(player.posangle >= 68 and player.posangle < 113) then -- 90
+				player.incx = 0		
+				player.incy = -planetinertia
+			elseif(player.posangle >= 113 and player.posangle < 158) then -- 135
+				player.incy =-planetinertia
+				player.incx = planetinertia
+			elseif(player.posangle >= 158 and player.posangle < 203) then --180
+				player.incy = 0
+				player.incx = planetinertia
+			elseif(player.posangle >= 203 and player.posangle < 248) then --225
+				player.incx = planetinertia
+				player.incy = planetinertia
+			elseif(player.posangle >= 248 and player.posangle < 293) then --270
+				player.incx = 0
+				player.incy = planetinertia	
+			elseif(player.posangle >= 293 and player.posangle < 338) then --315
+				player.incx =  -planetinertia
+				player.incy = planetinertia
+			end
+
+
+end
 
 
 
 
 function hitDetection()
+
+	--land player back on planet
+	if( (player.down or player.up) and distance <= planet.radius) then
+		
+		--If player was falling push back on planet, else catch player
+		if(player.down) then
+			planet.incx = planet.incx + player.incx
+			planet.incy = planet.incx + player.incy
+		end
+		
+		--Complete jump
+		player.down = false
+		player.up = false
+		
+	end
+
 
 
 	--bounce planet off edge of screen
