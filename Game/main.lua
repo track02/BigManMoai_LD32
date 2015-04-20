@@ -4,7 +4,6 @@ TODO
 
 	- Enemy paths
 
-
 	- Textures
 		- Planet
 		- Player
@@ -14,8 +13,6 @@ TODO
 	- Animations
 
 	- Sounds / Music
-
-
 
 - Extras
 
@@ -27,7 +24,7 @@ TODO
 		- background texture
 
 	
-- Code Cleanup
+- Code Cleanup not going to happen...
 
 	- Remove redundant variables / functions
 	- Structure code, more logical to read
@@ -38,7 +35,6 @@ TODO
 	- Split up smaller methods
 	- Move towards oop approach
 	]]
-
 
 
 
@@ -53,8 +49,13 @@ function love.load()
 	chargingframes = {"PC1.png","PC2.png","PC2.png","PC4.png","PC5.png","PC6.png","PC7.png","PC8.png" }
 	fallingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
 	landingframes = {"PLAND1.png","PLAND2.png","PLAND3.png","PLAND4.png","PLAND5.png","PLAND6.png","PLAND7.png","PLAND8.png"}
-
 	enemyframes = {"EnemyMin.png", "EnemyMed.png", "EnemyBig.png"}
+
+	--Sounds
+	jumpsound = love.audio.newSource("Jump.wav", "static")
+	walksound = love.audio.newSource("Walk.wav", "static")
+	explodesound = love.audio.newSource("Explosion.wav", "static")
+	bouncesound = love.audio.newSource("Bounce.wav", "static")
 
 
 
@@ -237,6 +238,9 @@ function love.keypressed(key, isrepeat)
 			player.speed = -player.speedcap
 		end
 		decel = 0
+
+		walksound:play()
+
 	end
 
 	if key == "d" and left == false and player.speed < player.speedcap  and player.speed >= 0 then
@@ -247,6 +251,9 @@ function love.keypressed(key, isrepeat)
 			player.speed = player.speedcap
 		end
 		decel = 0
+
+		walksound:play()
+
 	end
 
 
@@ -283,11 +290,13 @@ function love.keyreleased(key)
 	if(key == "w") then
 
 	--If not jumping or falling 
-		love.graphics.print("JUMP!", 100, 100)
 
 		--One jump at a time
 		if player.down == false and player.up == false then
 		
+			jumpsound:play()
+
+
 			player.up = true
 			player.down = false	
 			jump = true
@@ -502,10 +511,6 @@ for i, enemy in pairs(enemies) do
 
 		enemytexture = love.graphics.newImage(enemyframes[enemy.frame])
 
-		love.graphics.print(enemy.x, 50, 10)
-		love.graphics.print(enemy.y, 50, 20)
-		--love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius, 50)
-
 		love.graphics.draw(enemytexture, enemy.x - enemy.radius, enemy.y - enemy.radius)
 
 
@@ -587,16 +592,37 @@ function hitDetection()
 
 	--bounce planet off edge of screen
 
-	if(planet.x - planet.radius < 0 or planet.x  + planet.radius> love.window.getWidth()) then
+	if(planet.x - planet.radius - 5 < 0 or planet.x  + planet.radius + 5> love.window.getWidth()) then
 
 		planet.incx = - planet.incx
+		bouncesound:play()
+
+		if(planet.x < 0) then
+			planet.x = 0 + planet.radius + 5
+		end 
+		if(planet.x > love.window.getWidth()) then
+			planet.x = love.window.getWidth() - planet.radius - 5
+		end
+
 
 	end
 
 
-	if(planet.y - planet.radius < 0 or planet.y + planet.radius> love.window.getHeight()) then
+	if(planet.y - planet.radius - 5 <= 0 or planet.y + planet.radius + 5> love.window.getHeight()) then
 
 		planet.incy = - planet.incy
+		bouncesound:play()
+
+
+
+		if(planet.y < 0) then
+			planet.y = 0 + planet.radius + 5
+		end
+
+		if(planet.y > love.window.getHeight()) then
+			planet.y = love.window.getHeight() - planet.radius - 5
+		end
+
 	end
 	
 
@@ -651,12 +677,11 @@ function hitDetection()
 			--Bounce off
 
 
-			if(epydistance - 20 - enemy.radius) < 0 then
-				
 				-- Push away from player and planet
-				enemy.incx = -player.incx + planet.incx
-				enemy.incy = -player.incy + planet.incx
-			end
+			enemy.incx = -player.incx + planet.incx
+			enemy.incy = -player.incy + planet.incx
+			
+
 
 
 		end
@@ -672,8 +697,10 @@ function hitDetection()
 		if (epdistance - planet.radius - enemy.radius) <= 0 then
 
 
-			planet.incx = -planet.incx/2
-			planet.incy = -planet.incy/2
+			explodesound:play()
+
+			planet.incx = -planet.incx
+			planet.incy = -planet.incy
 
 
 			--Split in two
@@ -714,15 +741,11 @@ function hitDetection()
 				end
 
 
-
-
-
 				if(chosenx > 0 and choseny > 0 ) then
 					table.insert(enemies, {x = chosenx, y = choseny, incx = -enemy.incx, incy = -enemy.incy, radius = enemy.radius, frame = enemy.frame})
 				end
 			end
 		end
-
 
 
 		--Lastly check for enemy - enemy collisions
@@ -734,25 +757,49 @@ function hitDetection()
 				eedisty = math.abs(enemy.y - (enemy2.y))
 				eedistance = math.sqrt( (eedistx * eedistx) + (eedisty * eedisty))
 
+
 				if(eedistance - enemy.radius - enemy2.radius - 5 <= 0) then
 
 					enemy.incx = enemy2.incx * 1
 					enemy.incy = enemy2.incy * 1
+
+
 				end
 
 			end
 		end
 
 
-		if(enemy.x - enemy.radius <= 0 or enemy.x + enemy.radius >= love.window.getWidth()) then
+		if(enemy.x - enemy.radius - 5 <= 0 or enemy.x + enemy.radius + 5 >= love.window.getWidth()) then
 
 			enemy.incx = -enemy.incx 
+		
+		if(planet.x < 0) then
+			enemy.x = 0 + enemy.radius + 5
+		end
+
+		if(enemy.x > love.window.getWidth()) then
+			enemy.x = love.window.getWidth() - enemy.radius - 5
 		end
 
 
-		if(enemy.y - enemy.radius <= 0 or enemy.y + enemy.radius >= love.window.getHeight()) then
+		end
+
+
+		if(enemy.y - enemy.radius - 5 <= 0 or enemy.y + enemy.radius + 5 >= love.window.getHeight()) then
 
 			enemy.incy = -enemy.incy
+
+			if(enemy.y < 0) then
+				enem.y = 0 + enemy.radius + 5
+			end
+
+			if(enemy.y > love.window.getHeight()) then
+				enemy.y = love.window.getHeight() - enemy.radius - 5
+			end
+
+
+			
 		end
 
 
