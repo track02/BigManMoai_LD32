@@ -2,37 +2,16 @@
 
 TODO
 
-- Fixes
-	- Rotation of player
-		- Currently on outside of planet which is correct, but top left corner needs to be pointing upwards 
-		- Observer where bullets are drawn from 
-
-	- Projectile paths
-		- Rewrite update so bullets travel in a straight line
-		- Want collision detection with planet
-
-
 	- Enemy paths
-
-
-- Features
-
-		- Planet
-			- Jump to "push" planet away, avoid attacks and crush enemies
-
-
-
-	- Different enemy types
 
 
 	- Textures
 		- Planet
 		- Player
 		- Enemies
-		- Bullets
+
 
 	- Animations
-
 
 	- Sounds / Music
 
@@ -40,24 +19,24 @@ TODO
 
 - Extras
 
-	- Implement a polar coordinate system 
-
 	- Main menu
-
-	- Upgrades system
 
 	- Details
 		- Building / plants on planet
 		- Other planets, comets, asteroids
 		- background texture
 
-	- Multiplayer
-
-
-
+	
 - Code Cleanup
 
-	- Split into smaller classes / oop approach
+	- Remove redundant variables / functions
+	- Structure code, more logical to read
+		- Load - Update - Draw - Keyevents
+		- Custom functions
+	- Break up over several smaller files
+
+	- Split up smaller methods
+	- Move towards oop approach
 	]]
 
 function love.conf(t)
@@ -72,6 +51,17 @@ end
 function love.load()
 
 	love.keyboard.setKeyRepeat(true)
+
+
+	--Sprites - Move into single spritesheet
+	leftframes = {"PL1.png","PL2.png","PL3.png","PL4.png","PL5.png","PL6.png","PL7.png","PL8.png"}
+	rightframes = {"PR1.png", "PR2.png", "PR3.png", "PR4.png", "PR5.png", "PR6.png", "PR7.png", "PR8.png"}
+	chargingframes = {}
+	jumpingframes = {}
+	fallingframes = {}
+	landingframes = {}
+
+
 
 	--Planet initial details
 	planet = {x = love.window.getWidth() / 2, 
@@ -90,14 +80,19 @@ function love.load()
 			  x = planet.x, 
 			  y = planet.y - planet.radius, 
 			  speed = 0, speedcap = 200,
-			  texture = love.graphics.newImage("PlayerU.png"), 
+			  texture = love.graphics.newImage(rightframes[1]), 
 			  up = false, 
 			  down = false, 
 			  incx = 0,
 			  incy = 0,
 			  jumpmultiplier = 10,
 			  dropmultiplier = 10,
-			  charging = false}
+			  charging = false,
+			  jumping = false,	
+			  landed = false,
+			  frame = 1,	
+			  facing = 0	  
+			  }
 
 	calcPlayerPosition()
 
@@ -111,6 +106,9 @@ function love.load()
 	--current direction
 	left = false
 	right = false
+
+
+
 	jumpticks = 0
 
 
@@ -175,7 +173,8 @@ function love.update(dt)
 		hitDetection()
 
 
-	--Handle x/y/z
+		--Animations / Sound Effects
+		sfxanim()
 
 	if decel ~= 0 and player.speed ~= 0 then
 		player.speed = player.speed + decel
@@ -207,6 +206,11 @@ function love.keypressed(key, isrepeat)
 		decel = 0
 	end
 
+	if key == "w" and player.down == false and player.up == false then
+		charging = true --Play charging animation
+	end
+
+
 	if key == "s" and player.down then
 
 		player.down = true
@@ -223,11 +227,13 @@ function love.keyreleased(key)
 	if(key == "a" and left == true and right == false) then
 		decel = 5
 		left = false
+		player.facing = -1
 	end
 
 	if(key == "d" and left == false and right == true) then
 		decel = -5
 		right = false
+		player.facing = 1
 	end
 
 	if(key == "w") then
@@ -241,6 +247,13 @@ function love.keyreleased(key)
 			player.up = true
 			player.down = false	
 			jump = true
+
+			--end charging animation
+			charging = false
+
+			--start spring animation
+			jumping = true
+
 		end
 		
 	end
@@ -259,11 +272,7 @@ end
 
 function love.draw()
 
-	love.graphics.print(player.posangle,0,0)
 
-	love.graphics.print(player.speed,0,10)
-	
-	love.graphics.print(#enemies, 0, 20)
 
 	--Draw enemies
 	drawEnemies()
@@ -476,6 +485,7 @@ function hitDetection()
 		--Complete jump
 		player.down = false
 		player.up = false
+		player.landed = true
 		jumpticks = 0
 
 		
@@ -537,10 +547,142 @@ function hitDetection()
 
 			enemy.incy = enemyincy
 		end
+	end
+end
+
+
+function sfxanim() 
+
+
+	if(left and not player.charging and not player.jumping and not player.down and not player.landed) then
+
+					
+		--Repeated animation	
+		player.texture = love.graphics.newImage(leftframes[player.frame])
+		
+
+	   if player.frame == #leftframes - 1 then
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
+		
+
+	end
+
+	if(right and not player.charging and not player.jumping and not player.down and not player.landed) then
+
+					
+		--Repeated animation	
+		player.texture = love.graphics.newImage(rightframes[player.frame])
+
+	   if player.frame == #rightframes - 1 then
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
 		
 
 
 	end
+
+	if(player.charging) then
+
+
+		--[[
+			
+		--Repeated animation	
+		player.texture = chargingframes[i]
+
+	   if player.frame == #chargingframes then
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
+		]]
+
+
+	end
+
+	if(player.jumping) then
+
+
+		--[[
+			
+		player.texture = jumpingframes[i]
+
+	    --When landing animation ends, set landing to false to stop playing
+		if player.frame == #jumpingframes then
+			player.jumping = false
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
+		]]
+
+		--When spring up animation ends, set jumping to false to stop playing
+
+
+	end
+
+	if(player.down) then
+
+		--[[
+			
+		player.texture = fallingframes[i]
+
+	    if player.frame == #landingframes then
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
+		]]
+
+
+	end
+
+
+	if(player.landed) then
+
+
+		--[[
+			
+		player.texture = landingframes[i]
+
+	    --When landing animation ends, set landing to false to stop playing
+		if player.frame == #landingframes then
+			player.landing = false
+			player.frame = 1
+		else
+			player.frame = player.frame + 1
+		end
+
+		]]
+	end
+
+
+
+	--Default position
+	if(not player.landed and not player.charging and not player.down and not player.jumping and  not left and not right) then
+
+		--[[
+
+			--Check facing direction
+			if(player.facing == -1) then
+				player.texture == leftframes[0]
+			else
+				player.texture == rightframes[0]
+			end
+
+		]]
+
+	end
+
 
 end
 
