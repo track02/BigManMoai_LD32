@@ -124,7 +124,6 @@ function love.load()
 
 
 
-	--Limit fps
 	min_dt = 1/60
 	next_time = love.timer.getTime()
 
@@ -306,8 +305,7 @@ function love.draw()
       next_time = cur_time
       return
    end
-   love.timer.sleep(next_time - cur_time)
-
+  love.timer.sleep(next_time - cur_time)
 
 end
 
@@ -688,9 +686,12 @@ function sfxanim()
 	if(player.landed) then
 				
 
+		if player.frame > #landingframes then
+			player.frame = 1
+		end
+
 
 		player.texture = love.graphics.newImage(landingframes[player.frame])
-
 
 
 	    --When landing animation ends, set landing to false to stop playing
