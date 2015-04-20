@@ -76,7 +76,7 @@ function love.load()
 			}
 
 	--Player initial details
-	player = {posangle = 270, rotangle = 0, 
+	player = {posangle = 270, centangle = 265, --Estimated angle, should calculate
 			  x = planet.x, 
 			  y = planet.y - planet.radius, 
 			  speed = 0, speedcap = 200,
@@ -94,12 +94,17 @@ function love.load()
 			  facing = 0,	  
 			  centx = 0,
 			  centy = 0,
-			  height = 0
+			  height = 0,
+			  width = 0
 			  }
 
-	player.centx = player.x
-	player.centy = player.y
 	player.height = (player.texture):getHeight()
+	player.width = (player.texture):getWidth()
+
+	player.centx = player.x - (player.width / 2)
+	player.centy = player.y - (player.height / 2)
+
+
 	jumpticks = 0
 
 	planetinertia = 30
@@ -109,10 +114,19 @@ function love.load()
 	pdistx = 0
 	pdisty = 0
 	distance = 0
+
+	cdistx = 0
+	cdisty = 0
+	cdistance = 0
+
 	--current direction
 	left = false
 	right = false
 
+
+	ycdist =  math.abs(player.centy - (planet.y))
+	xcdist = math.abs(player.centx - (planet.x))
+	centerplayerdistance = 	math.sqrt( (ycdist * ycdist) + (xcdist * xcdist))
 
 
 
@@ -138,6 +152,10 @@ end
 --Every frame
 function love.update(dt)	
 
+
+				--Handle projectiles
+		hitDetection()
+
 		next_time = next_time + min_dt
 
 
@@ -146,7 +164,7 @@ function love.update(dt)
 		findSegment()
 		
 		player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
-
+		player.centangle = player.centangle + (player.speed * dt) --rotate with planet surface
 
 		if(player.up) then
 			--move player up (reverse inc vals)	
@@ -168,9 +186,6 @@ function love.update(dt)
 
 		end
 
-		--Determine player position
-		calcPlayerPosition()
-		
 		--Shift planet
 		planet.x = planet.x + (dt * planet.incx)
 		planet.y = planet.y + (dt * planet.incy)
@@ -180,14 +195,18 @@ function love.update(dt)
 				player.y = player.y + (dt * planet.incy)
 				player.centx = player.centx + (dt * planet.incx)
 				player.centy = player.centy + (dt * planet.incy)
+
 		end
 	
+
+
+		--Determine player position
+		calcPlayerPosition()
+		
+
 		--Handle enemy movement
 		updateEnemies(dt)
 		
-
-		--Handle projectiles
-		hitDetection()
 
 
 		--Animations / Sound Effects
@@ -297,6 +316,9 @@ function love.draw()
 
 
 	love.graphics.print(love.timer.getFPS(), 100,100)
+	love.graphics.print(player.centx, 100,110)
+	love.graphics.print(player.centy, 100,120)
+	love.graphics.print(player.centangle, 100,130)
 
 
 	--Draw enemies
@@ -306,13 +328,16 @@ function love.draw()
 	--Draw planet
 	love.graphics.draw(planet.texture, planet.x - (planet.radius), planet.y - (planet.radius))
 
-	--Draw player last due to rotations
-	calcPlayerRotation()
-	love.graphics.draw(player.texture, player.x, player.y)
-	--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
-
 
 	love.graphics.circle("fill", player.centx, player.centy, 3, 5)
+
+
+
+	--Draw player last due to rotations
+	calcPlayerRotation()
+  	love.graphics.draw(player.texture, player.x, player.y)
+	--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
+
 
 
 
@@ -347,18 +372,27 @@ function calcPlayerPosition()
 	distance = math.sqrt( (pdistx * pdistx) + (pdisty * pdisty))
 
 
+	--get center player distance from planet
+	cpdistx = math.abs(player.centx - (planet.x))
+	cpdisty = math.abs(player.centy - (planet.y))
+	cdistance = math.sqrt( (cpdistx * cpdistx) + (cpdisty * cpdisty))
+
 	--Check if player is inside planet, move outwards if so
 	if(distance < planet.radius) then
 		distance = planet.radius
+	end
+
+	if(cdistance < centerplayerdistance) then
+
+		cdistance = centerplayerdistance	
 	end
 
 	
 	--Rotate about origin around a circle with radius of distance - total player distance from planet centre
 	player.x =  (planet.x) + (distance * math.cos(player.posangle * 0.01745))
 	player.y =  (planet.y) + (distance * math.sin(player.posangle * 0.01745))
-	player.centx =  (planet.x) + (distance * math.cos(player.posangle * 0.01745))
-	player.centy =  (planet.y) + (distance * math.sin(player.posangle * 0.01745))
-
+	player.centx = (planet.x) + (cdistance * math.cos(player.centangle * 0.01745))
+	player.centy = (planet.y) + (cdistance * math.sin(player.centangle * 0.01745))
 	--This is the position of the top left point of the rectangle
 	--Rotate coordinates as player moves around the planet
 
@@ -566,32 +600,27 @@ function hitDetection()
 		end
 
 
-		if(enemy.x - enemy.radius< 0 or enemy.x + enemy.radius > love.window.getWidth()) then
-
-			enemy.incx = enemyincx
-		end
-
-
-		if(enemy.y - enemy.radius < 0 or enemy.y + enemy.radius> love.window.getHeight()) then
-
-			enemy.incy = enemyincy
-		end
-
 
 		--Enemy distance to player
 		epydistx = math.abs(enemy.x - (player.centx))
 		epydisty = math.abs(enemy.y - (player.centy))
 		epydistance = math.sqrt((epydistx * epydistx) + (epydisty * epydisty))
 
-		if(epydistance - (player.height*0.5) - enemy.radius) <= 0 then
+		if(epydistance - 20 - enemy.radius) <= 0 then
 
 			--Damage player!
 			-- code here
 			--
 
 			--Bounce off
-			enemy.incx = enemy.incx + player.incx
-			enemy.incy = enemy.incy + player.incy
+
+
+			if(epydistance - 20 - enemy.radius) < 0 then
+
+				
+				-- Push to surface
+				enemy.incx = -player.incx + planet.incx
+				enemy.incy = -player.incy + planet.incx
 
 
 		end
@@ -612,7 +641,7 @@ function hitDetection()
 			enemy.radius = enemy.radius / 2
 
 			if(enemy.radius < 5) then
-				enemy = nil
+				table.remove(enemies, i)
 			else
 
 				enemy.incx = enemy.incx + planet.incx
@@ -622,7 +651,18 @@ function hitDetection()
 			end
 
 
+		end
 
+
+		if(enemy.x - enemy.radius <= 0 or enemy.x + enemy.radius >= love.window.getWidth()) then
+
+			enemy.incx = -enemy.incx
+		end
+
+
+		if(enemy.y - enemy.radius <= 0 or enemy.y + enemy.radius >= love.window.getHeight()) then
+
+			enemy.incy = -enemy.incy
 		end
 
 	end
