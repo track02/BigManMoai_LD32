@@ -56,10 +56,10 @@ function love.load()
 	--Sprites - Move into single spritesheet
 	leftframes = {"PL1.png","PL2.png","PL3.png","PL4.png","PL5.png","PL6.png","PL7.png","PL8.png"}
 	rightframes = {"PR1.png", "PR2.png", "PR3.png", "PR4.png", "PR5.png", "PR6.png", "PR7.png", "PR8.png"}
-	chargingframes = {}
+	chargingframes = {"PC1.png","PC2.png","PC2.png","PC4.png","PC5.png","PC6.png","PC7.png","PC8.png" }
 	jumpingframes = {}
-	fallingframes = {}
-	landingframes = {}
+	fallingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
+	--landingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
 
 
 
@@ -122,12 +122,18 @@ function love.load()
 	--Enemy attackers
 	enemies = {}
 
+	prev_time = 0
+
 
 
 end
 
 --Every frame
 function love.update(dt)	
+
+		if(prev_time == 0) then 
+			prev_time = dt
+		end
 		
 
 		--Determine where player lies in relation to planet
@@ -174,11 +180,16 @@ function love.update(dt)
 
 
 		--Animations / Sound Effects
+
 		sfxanim()
 
 	if decel ~= 0 and player.speed ~= 0 then
 		player.speed = player.speed + decel
 	end
+
+
+	prev_time = dt
+
 end
 
 
@@ -207,7 +218,7 @@ function love.keypressed(key, isrepeat)
 	end
 
 	if key == "w" and player.down == false and player.up == false then
-		charging = true --Play charging animation
+		player.charging = true --Play charging animation
 	end
 
 
@@ -249,7 +260,7 @@ function love.keyreleased(key)
 			jump = true
 
 			--end charging animation
-			charging = false
+			player.charging = false
 
 			--start spring animation
 			jumping = true
@@ -553,35 +564,53 @@ end
 
 function sfxanim() 
 
+	--Take in dt
+	--Update every second rather than every frame
 
-	if(left and not player.charging and not player.jumping and not player.down and not player.landed) then
+
+			--Default position
+
+			--Check facing direction
+		if(player.facing == -1) then
+			player.texture = love.graphics.newImage(leftframes[1])
+		else
+			player.texture = love.graphics.newImage(rightframes[1])
+		end
+	
+
+
+
+	if(left and player.up == false and player.down == false) then
 
 					
+		 if player.frame >= #leftframes - 1 then
+			player.frame = 1
+		end
+			
+
 		--Repeated animation	
 		player.texture = love.graphics.newImage(leftframes[player.frame])
 		
 
-	   if player.frame == #leftframes - 1 then
-			player.frame = 1
-		else
-			player.frame = player.frame + 1
-		end
+		player.frame = player.frame + 1
+		
 
 		
 
 	end
 
-	if(right and not player.charging and not player.jumping and not player.down and not player.landed) then
+	if(right and player.up == false and player.down == false) then
 
 					
+	    if player.frame >= #rightframes - 1 then
+			player.frame = 1
+		end
+
 		--Repeated animation	
 		player.texture = love.graphics.newImage(rightframes[player.frame])
 
-	   if player.frame == #rightframes - 1 then
-			player.frame = 1
-		else
-			player.frame = player.frame + 1
-		end
+		player.frame = player.frame + 1
+
 
 		
 
@@ -589,20 +618,18 @@ function sfxanim()
 	end
 
 	if(player.charging) then
-
-
-		--[[
-			
-		--Repeated animation	
-		player.texture = chargingframes[i]
-
-	   if player.frame == #chargingframes then
+		
+		if player.frame >= #chargingframes - 1 then
 			player.frame = 1
-		else
-			player.frame = player.frame + 1
 		end
 
-		]]
+
+		--Repeated animation	
+		player.texture = love.graphics.newImage(chargingframes[player.frame])
+
+
+		player.frame = player.frame + 1
+		
 
 
 	end
@@ -631,57 +658,39 @@ function sfxanim()
 
 	if(player.down) then
 
-		--[[
-			
-		player.texture = fallingframes[i]
+		
 
-	    if player.frame == #landingframes then
+		if player.frame == #fallingframes - 1 then
 			player.frame = 1
-		else
-			player.frame = player.frame + 1
 		end
+			
+		player.texture = love.graphics.newImage(fallingframes[player.frame])
 
-		]]
 
+		player.frame = player.frame + 1
+		
+
+		
 
 	end
 
 
 	if(player.landed) then
-
-
-		--[[
-			
-		player.texture = landingframes[i]
+				
+		--[[player.texture = love.graphics.newImage(landingframes[player.frame])
 
 	    --When landing animation ends, set landing to false to stop playing
-		if player.frame == #landingframes then
+		if player.frame == #landingframes - 1 then
 			player.landing = false
+			player.down = false --Jump over
 			player.frame = 1
 		else
 			player.frame = player.frame + 1
 		end
-
-		]]
+]]
+		
 	end
 
-
-
-	--Default position
-	if(not player.landed and not player.charging and not player.down and not player.jumping and  not left and not right) then
-
-		--[[
-
-			--Check facing direction
-			if(player.facing == -1) then
-				player.texture == leftframes[0]
-			else
-				player.texture == rightframes[0]
-			end
-
-		]]
-
-	end
 
 
 end
