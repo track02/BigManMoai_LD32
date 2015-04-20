@@ -6,6 +6,10 @@ Ludum Dare 32 - Jam
 
 - Can also run by dragging the Game folder over (a shortcut to) love.exe (found in LOVE folder)
 
+
+- There are instructions for running on different OS here: https://love2d.org/wiki/Game_Distribution
+
+
 - Was able to just finish the gameplay mechanics in time before deadline
 - No score or levels at the moment, just bounce around and crash into aliens
 
