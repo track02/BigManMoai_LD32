@@ -590,47 +590,6 @@ function hitDetection()
 
 
 
-	--bounce planet off edge of screen
-
-	if(planet.x - planet.radius - 5 < 0 or planet.x  + planet.radius + 5> love.window.getWidth()) then
-
-		planet.incx = - planet.incx
-		bouncesound:play()
-
-		if(planet.x < 0) then
-			planet.x = 0 + planet.radius + 5
-		end 
-		if(planet.x > love.window.getWidth()) then
-			planet.x = love.window.getWidth() - planet.radius - 5
-		end
-
-
-	end
-
-
-	if(planet.y - planet.radius - 5 <= 0 or planet.y + planet.radius + 5> love.window.getHeight()) then
-
-		planet.incy = - planet.incy
-		bouncesound:play()
-
-
-
-		if(planet.y < 0) then
-			planet.y = 0 + planet.radius + 5
-		end
-
-		if(planet.y > love.window.getHeight()) then
-			planet.y = love.window.getHeight() - planet.radius - 5
-		end
-
-	end
-	
-
-	--Bounce planet off edge if player touches
-
-
-
-
 	-- Get the widths of the enemies
 	for i, enemy in pairs(enemies) do
 
@@ -796,14 +755,46 @@ function hitDetection()
 
 			if(enemy.y > love.window.getHeight()) then
 				enemy.y = love.window.getHeight() - enemy.radius - 5
-			end
+			end	
+		end
+	end
 
+	--bounce planet off edge of screen
 
-			
+	if(planet.x - planet.radius - 5 < 0 or planet.x  + planet.radius + 5> love.window.getWidth()) then
+
+		planet.incx = - planet.incx
+		bouncesound:play()
+
+		if(planet.x < 0) then
+			planet.x = 0 + planet.radius + 5
+		end 
+		if(planet.x > love.window.getWidth()) then
+			planet.x = love.window.getWidth() - planet.radius - 5
 		end
 
 
 	end
+
+
+	if(planet.y - planet.radius - 5 <= 0 or planet.y + planet.radius + 5> love.window.getHeight()) then
+
+		planet.incy = - planet.incy
+		bouncesound:play()
+
+
+
+		if(planet.y < 0) then
+			planet.y = 0 + planet.radius + 5
+		end
+
+		if(planet.y > love.window.getHeight()) then
+			planet.y = love.window.getHeight() - planet.radius - 5
+		end
+
+	end
+
+
 end
 
 
