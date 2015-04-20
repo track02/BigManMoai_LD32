@@ -59,7 +59,7 @@ function love.load()
 	chargingframes = {"PC1.png","PC2.png","PC2.png","PC4.png","PC5.png","PC6.png","PC7.png","PC8.png" }
 	jumpingframes = {}
 	fallingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
-	--landingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
+	landingframes = {"PLAND1.png","PLAND2.png","PLAND3.png","PLAND4.png","PLAND5.png","PLAND6.png","PLAND7.png","PLAND8.png"}
 
 
 
@@ -497,7 +497,9 @@ function hitDetection()
 		player.down = false
 		player.up = false
 		player.landed = true
+		player.frames = 1
 		jumpticks = 0
+
 
 		
 	end
@@ -677,17 +679,20 @@ function sfxanim()
 
 	if(player.landed) then
 				
-		--[[player.texture = love.graphics.newImage(landingframes[player.frame])
+
+
+		player.texture = love.graphics.newImage(landingframes[player.frame])
+
+
 
 	    --When landing animation ends, set landing to false to stop playing
-		if player.frame == #landingframes - 1 then
-			player.landing = false
+		if player.frame == #landingframes then
+			player.landed = false
 			player.down = false --Jump over
 			player.frame = 1
 		else
 			player.frame = player.frame + 1
 		end
-]]
 		
 	end
 
