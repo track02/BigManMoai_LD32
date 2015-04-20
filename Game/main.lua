@@ -39,13 +39,7 @@ TODO
 	- Move towards oop approach
 	]]
 
-function love.conf(t)
 
-	t.window.width = 800
-	t.window.height = 600
-	t.console = true
-
-end
 
 
 function love.load()
@@ -57,9 +51,10 @@ function love.load()
 	leftframes = {"PL1.png","PL2.png","PL3.png","PL4.png","PL5.png","PL6.png","PL7.png","PL8.png"}
 	rightframes = {"PR1.png", "PR2.png", "PR3.png", "PR4.png", "PR5.png", "PR6.png", "PR7.png", "PR8.png"}
 	chargingframes = {"PC1.png","PC2.png","PC2.png","PC4.png","PC5.png","PC6.png","PC7.png","PC8.png" }
-	jumpingframes = {}
 	fallingframes = {"PLD1.png","PLD2.png","PLD3.png","PLD4.png","PLD5.png","PLD6.png","PLD7.png","PLD8.png"}
 	landingframes = {"PLAND1.png","PLAND2.png","PLAND3.png","PLAND4.png","PLAND5.png","PLAND6.png","PLAND7.png","PLAND8.png"}
+
+	enemyframes = {"EnemyMin.png", "EnemyMed.png", "EnemyBig.png"}
 
 
 
@@ -129,6 +124,7 @@ function love.load()
 	centerplayerdistance = 	math.sqrt( (ycdist * ycdist) + (xcdist * xcdist))
 
 
+	started = false
 
 
 
@@ -144,6 +140,9 @@ function love.load()
 	calcPlayerPosition()
 
 
+	background = love.graphics.newImage("Menu.png")
+
+
 	min_dt = 1/60
 	next_time = love.timer.getTime()
 
@@ -153,73 +152,75 @@ end
 function love.update(dt)	
 
 
-				--Handle projectiles
-		hitDetection()
+		if(started == true) then
 
-		next_time = next_time + min_dt
+			--Handle projectiles
+			hitDetection()
+
+			next_time = next_time + min_dt
 
 
-		--Determine where player lies in relation to planet
-		--Update player segment location as they move around the planet
-		findSegment()
+			--Determine where player lies in relation to planet
+			--Update player segment location as they move around the planet
+			findSegment()
+			
+			player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
+			player.centangle = player.centangle + (player.speed * dt) --rotate with planet surface
+
+			if(player.up) then
+				--move player up (reverse inc vals)	
+				player.y = player.y - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
+				player.x = player.x - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
+				player.centx = player.centx - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
+				player.centy = player.centy - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
+
+
+				jumpticks = jumpticks + 1
+
+
+			elseif(player.down) then
+				--move player down (reverse inc vals)
+				player.y = player.y + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
+				player.x = player.x + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
+				player.centx = player.centx + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
+				player.centy = player.centy + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
+
+			end
+
+			--Shift planet
+			planet.x = planet.x + (dt * planet.incx)
+			planet.y = planet.y + (dt * planet.incy)
+			--Player too if he's not jumping off planet
+			if (player.up and player.down == false) or (player.up == false and player.down == false) then
+					player.x = player.x + (dt * planet.incx)
+					player.y = player.y + (dt * planet.incy)
+					player.centx = player.centx + (dt * planet.incx)
+					player.centy = player.centy + (dt * planet.incy)
+
+			end
 		
-		player.posangle = player.posangle + (player.speed * dt) --rotate with planet surface
-		player.centangle = player.centangle + (player.speed * dt) --rotate with planet surface
-
-		if(player.up) then
-			--move player up (reverse inc vals)	
-			player.y = player.y - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
-			player.x = player.x - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
-			player.centx = player.centx - (dt * player.incx) - (dt* player.incx * player.jumpmultiplier)
-			player.centy = player.centy - (dt * player.incy) - (dt* player.incy * player.jumpmultiplier)
 
 
-			jumpticks = jumpticks + 1
+			--Determine player position
+			calcPlayerPosition()
+			
+
+			--Handle enemy movement
+			updateEnemies(dt)
+			
 
 
-		elseif(player.down) then
-			--move player down (reverse inc vals)
-			player.y = player.y + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
-			player.x = player.x + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
-			player.centx = player.centx + (dt * player.incx) + (dt* player.incx * player.dropmultiplier)
-			player.centy = player.centy + (dt * player.incy) + (dt* player.incy * player.dropmultiplier)
+			--Animations / Sound Effects
+			sfxanim()
 
+			
+
+
+		if decel ~= 0 and player.speed ~= 0 then
+			player.speed = player.speed + decel
 		end
 
-		--Shift planet
-		planet.x = planet.x + (dt * planet.incx)
-		planet.y = planet.y + (dt * planet.incy)
-		--Player too if he's not jumping off planet
-		if (player.up and player.down == false) or (player.up == false and player.down == false) then
-				player.x = player.x + (dt * planet.incx)
-				player.y = player.y + (dt * planet.incy)
-				player.centx = player.centx + (dt * planet.incx)
-				player.centy = player.centy + (dt * planet.incy)
-
-		end
-	
-
-
-		--Determine player position
-		calcPlayerPosition()
-		
-
-		--Handle enemy movement
-		updateEnemies(dt)
-		
-
-
-		--Animations / Sound Effects
-		sfxanim()
-
-		
-
-
-	if decel ~= 0 and player.speed ~= 0 then
-		player.speed = player.speed + decel
 	end
-
-
 
 end
 
@@ -247,6 +248,7 @@ function love.keypressed(key, isrepeat)
 		end
 		decel = 0
 	end
+
 
 	if key == "w" and player.down == false and player.up == false then
 		player.charging = true --Play charging animation
@@ -300,12 +302,19 @@ function love.keyreleased(key)
 		
 	end
 
+	if(key == "z") then
+		started = true
+		background = love.graphics.newImage("Background.png")
+	end
+
+
 	--Slam back down
 	if(key == "s" and player.up == true) then
 		--Set down to false --
 		player.down = true
 		player.up = false
 	end
+
 
 end
 
@@ -315,38 +324,40 @@ end
 function love.draw()
 
 
-	love.graphics.print(love.timer.getFPS(), 100,100)
-	love.graphics.print(player.centx, 100,110)
-	love.graphics.print(player.centy, 100,120)
-	love.graphics.print(player.centangle, 100,130)
+	love.graphics.draw(background, 0,0)
+
+	if(started) then
 
 
-	--Draw enemies
-	drawEnemies()
+		--Draw enemies
+		drawEnemies()
 
 
-	--Draw planet
-	love.graphics.draw(planet.texture, planet.x - (planet.radius), planet.y - (planet.radius))
+		--Draw planet
+		love.graphics.draw(planet.texture, planet.x - (planet.radius), planet.y - (planet.radius))
 
 
-	love.graphics.circle("fill", player.centx, player.centy, 3, 5)
-
-
-
-	--Draw player last due to rotations
-	calcPlayerRotation()
-  	love.graphics.draw(player.texture, player.x, player.y)
-	--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
+		love.graphics.circle("fill", player.centx, player.centy, 3, 5)
 
 
 
+		--Draw player last due to rotations
+		calcPlayerRotation()
+	  	love.graphics.draw(player.texture, player.x, player.y)
+		--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
 
-   local cur_time = love.timer.getTime() 
-   if next_time <= cur_time then
-      next_time = cur_time
-      return
-   end
-  love.timer.sleep(next_time - cur_time)
+
+
+
+	   local cur_time = love.timer.getTime() 
+	   if next_time <= cur_time then
+	      next_time = cur_time
+	      return
+	   end
+
+	  love.timer.sleep(next_time - cur_time)
+
+	end
 
 end
 
@@ -416,21 +427,33 @@ function updateEnemies(dt)
 	--Generate another?
 	--Init at center and translate away by random amount
 	
-		plusmin = math.random(0,1)
+		insert = true
 
-		if(plusmin == 0) then
-			enemyx = planet.x + planet.radius + planet.radius + planet.radius
-		else
-			enemyx = planet.x - planet.radius + planet.radius + planet.radius
+		--Generate potential coordinates, test, spawn enemy if pass
+		randomx = math.random(0,love.window.getWidth())
+		randomy = math.random(0,love.window.getHeight())
+
+
+		--Should calculate best place to spawn based on planet location - not enough time now
+
+		if randomy - 50 < 0 or randomx - 50 < 0 then
+			insert = false
 		end
 
-		plusmin = math.random(0,1)
-
-		if(plusmin == 0) then
-			enemyy = planet.y + planet.radius + planet.radius + planet.radius
-		else
-			enemyy = planet.y - planet.radius + planet.radius + planet.radius
+		if(randomy + 50 > love.window.getHeight() or randomx + 50 > love.window.getWidth()) then
+			insert = false
 		end
+
+
+		disttoplanetx = math.abs(randomx - planet.x)
+		disttoplanety = math.abs(randomy - planet.y)
+		disttotal = math.sqrt((disttoplanetx * disttoplanetx) + (disttoplanety * disttoplanety))
+
+		if(disttotal - 50 <= 0) then
+			inser = false
+		end
+
+
 
 		plusmin = math.random(0,2)
 		
@@ -456,8 +479,9 @@ function updateEnemies(dt)
 			enemyincx = 25
 		end
 
-		table.insert(enemies, {x = enemyx, y = enemyy, incx = enemyincx, incy = enemyincy, radius = 25, speed = 3, cleanup = false})
-		
+		if(insert) then
+			table.insert(enemies, {x = randomy, y = randomx, incx = enemyincx, incy = enemyincy, radius = 25, frame = 3})
+		end
 	end
 	--Update positions
 	for i, enemy in pairs(enemies) do
@@ -476,9 +500,13 @@ function drawEnemies()
 
 for i, enemy in pairs(enemies) do
 
+		enemytexture = love.graphics.newImage(enemyframes[enemy.frame])
+
 		love.graphics.print(enemy.x, 50, 10)
 		love.graphics.print(enemy.y, 50, 20)
-		love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius, 50)
+		--love.graphics.circle("fill", enemy.x, enemy.y, enemy.radius, 50)
+
+		love.graphics.draw(enemytexture, enemy.x - enemy.radius, enemy.y - enemy.radius)
 
 
 	end
@@ -572,6 +600,11 @@ function hitDetection()
 	end
 	
 
+	--Bounce planet off edge if player touches
+
+
+
+
 	-- Get the widths of the enemies
 	for i, enemy in pairs(enemies) do
 
@@ -606,6 +639,9 @@ function hitDetection()
 		epydisty = math.abs(enemy.y - (player.centy))
 		epydistance = math.sqrt((epydistx * epydistx) + (epydisty * epydisty))
 
+
+		--20 => rough guess of radius if circle was drawn around player
+		--Easier to check for collisions that keeping track of edge orientation for rectangular hbox
 		if(epydistance - 20 - enemy.radius) <= 0 then
 
 			--Damage player!
@@ -616,11 +652,11 @@ function hitDetection()
 
 
 			if(epydistance - 20 - enemy.radius) < 0 then
-
 				
-				-- Push to surface
+				-- Push away from player and planet
 				enemy.incx = -player.incx + planet.incx
 				enemy.incy = -player.incy + planet.incx
+			end
 
 
 		end
@@ -632,13 +668,17 @@ function hitDetection()
 		epdistance = math.sqrt( (epdistx * epdistx) + (epdisty * epdisty))
 
 
-
-
 		--Remove planet / enemy radii 
 		if (epdistance - planet.radius - enemy.radius) <= 0 then
 
+
+			planet.incx = -planet.incx/2
+			planet.incy = -planet.incy/2
+
+
 			--Split in two
-			enemy.radius = enemy.radius / 2
+			enemy.radius = enemy.radius - 10
+			enemy.frame = enemy.frame - 1
 
 			if(enemy.radius < 5) then
 				table.remove(enemies, i)
@@ -647,16 +687,66 @@ function hitDetection()
 				enemy.incx = enemy.incx + planet.incx
 				enemy.incy = enemy.incy + planet.incy
 
-				table.insert(enemies, {x = enemy.x, y = enemy.y, incx = enemyincx, incy = enemyincy, radius = enemy.radius, speed = 3, cleanup = false})
+				--Find best spot to spawn child
+
+				potx1 = enemy.x + enemy.radius + 10 -- 5 tolerance
+				potx2 = enemy.x - enemy.radius - 10
+				poty1 = enemy.y + enemy.radius + 10
+				poty2 = enemy.y - enemy.radius - 10
+
+				chosenx = potx1
+				choseny = poty1
+
+				--Just check for edges
+				if(potx2 < 0 or potx2 > love.window.getWidth()) then
+					potx2 = -1
+				end
+				if(potx1 < 0 or potx1 > love.window.getWidth()) then
+					potx1 = -1
+					chosenx = potx2
+				end
+				if(poty2 < 0 or poty1 > love.window.getHeight()) then
+					poty2 = -1
+				end
+				if(poty1 < 0 or poty1 > love.window.getHeight()) then
+					poty1 = -1
+					choseny = poty2
+				end
+
+
+
+
+
+				if(chosenx > 0 and choseny > 0 ) then
+					table.insert(enemies, {x = chosenx, y = choseny, incx = -enemy.incx, incy = -enemy.incy, radius = enemy.radius, frame = enemy.frame})
+				end
 			end
+		end
 
 
+
+		--Lastly check for enemy - enemy collisions
+		for j, enemy2 in pairs(enemies) do
+
+			if(enemy ~= enemy2) then
+
+				eedistx = math.abs(enemy.x - (enemy2.x))
+				eedisty = math.abs(enemy.y - (enemy2.y))
+				eedistance = math.sqrt( (eedistx * eedistx) + (eedisty * eedisty))
+
+				if(eedistance - enemy.radius - enemy2.radius - 5 <= 0) then
+
+					enemy.incx = enemy2.incx * 1
+					enemy.incy = enemy2.incy * 1
+				end
+
+			end
 		end
 
 
 		if(enemy.x - enemy.radius <= 0 or enemy.x + enemy.radius >= love.window.getWidth()) then
 
-			enemy.incx = -enemy.incx
+			enemy.incx = -enemy.incx 
 		end
 
 
@@ -664,6 +754,7 @@ function hitDetection()
 
 			enemy.incy = -enemy.incy
 		end
+
 
 	end
 end
