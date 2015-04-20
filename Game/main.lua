@@ -791,7 +791,7 @@ function hitDetection()
 			enemy.incy = -enemy.incy
 
 			if(enemy.y < 0) then
-				enem.y = 0 + enemy.radius + 5
+				enemy.y = 0 + enemy.radius + 5
 			end
 
 			if(enemy.y > love.window.getHeight()) then
