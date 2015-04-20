@@ -122,19 +122,19 @@ function love.load()
 	--Enemy attackers
 	enemies = {}
 
-	prev_time = 0
 
 
+	--Limit fps
+	min_dt = 1/60
+	next_time = love.timer.getTime()
 
 end
 
 --Every frame
 function love.update(dt)	
 
-		if(prev_time == 0) then 
-			prev_time = dt
-		end
-		
+		next_time = next_time + min_dt
+
 
 		--Determine where player lies in relation to planet
 		--Update player segment location as they move around the planet
@@ -180,15 +180,16 @@ function love.update(dt)
 
 
 		--Animations / Sound Effects
-
 		sfxanim()
+
+		
+
 
 	if decel ~= 0 and player.speed ~= 0 then
 		player.speed = player.speed + decel
 	end
 
 
-	prev_time = dt
 
 end
 
@@ -284,6 +285,8 @@ end
 function love.draw()
 
 
+	love.graphics.print(love.timer.getFPS(), 100,100)
+
 
 	--Draw enemies
 	drawEnemies()
@@ -298,7 +301,12 @@ function love.draw()
 	--love.graphics.rectangle("fill", player.x, player.y, player.height, player.width)
 
 
-
+   local cur_time = love.timer.getTime() 
+   if next_time <= cur_time then
+      next_time = cur_time
+      return
+   end
+   love.timer.sleep(next_time - cur_time)
 
 
 end
