@@ -155,8 +155,6 @@ function love.update(dt)
 
 		if(started == true) then
 
-			--Handle projectiles
-			hitDetection()
 
 			next_time = next_time + min_dt
 
@@ -214,12 +212,16 @@ function love.update(dt)
 			--Animations / Sound Effects
 			sfxanim()
 
-			
+		
 
 
 		if decel ~= 0 and player.speed ~= 0 then
 			player.speed = player.speed + decel
 		end
+
+					--Handle projectiles
+			hitDetection()
+
 
 	end
 
@@ -489,7 +491,7 @@ function updateEnemies(dt)
 		end
 
 		if(insert) then
-			table.insert(enemies, {x = randomy, y = randomx, incx = enemyincx, incy = enemyincy, radius = 25, frame = 3})
+			table.insert(enemies, {x = randomy, y = randomx, incx = enemyincx, incy = enemyincy, radius = 25, frame = 3, checked = false})
 		end
 	end
 	--Update positions
@@ -593,6 +595,8 @@ function hitDetection()
 	-- Get the widths of the enemies
 	for i, enemy in pairs(enemies) do
 
+		enemy.checked = false
+
 		plusmin = math.random(0,2)
 		
 		if(plusmin == 0) then
@@ -675,10 +679,10 @@ function hitDetection()
 
 				--Find best spot to spawn child
 
-				potx1 = enemy.x + enemy.radius + 10 -- 5 tolerance
-				potx2 = enemy.x - enemy.radius - 10
-				poty1 = enemy.y + enemy.radius + 10
-				poty2 = enemy.y - enemy.radius - 10
+				potx1 = enemy.x + enemy.radius + 15 -- 5 tolerance
+				potx2 = enemy.x - enemy.radius - 15
+				poty1 = enemy.y + enemy.radius + 15
+				poty2 = enemy.y - enemy.radius - 15
 
 				chosenx = potx1
 				choseny = poty1
@@ -701,7 +705,7 @@ function hitDetection()
 
 
 				if(chosenx > 0 and choseny > 0 ) then
-					table.insert(enemies, {x = chosenx, y = choseny, incx = -enemy.incx, incy = -enemy.incy, radius = enemy.radius, frame = enemy.frame})
+					table.insert(enemies, {x = chosenx, y = choseny, incx = -enemy.incx, incy = -enemy.incy, radius = enemy.radius, frame = enemy.frame, checked = false})
 				end
 			end
 		end
@@ -712,15 +716,17 @@ function hitDetection()
 
 			if(enemy ~= enemy2) then
 
+
 				eedistx = math.abs(enemy.x - (enemy2.x))
 				eedisty = math.abs(enemy.y - (enemy2.y))
+
 				eedistance = math.sqrt( (eedistx * eedistx) + (eedisty * eedisty))
 
-
+				
 				if(eedistance - enemy.radius - enemy2.radius - 5 <= 0) then
 
-					enemy.incx = enemy2.incx * 1
-					enemy.incy = enemy2.incy * 1
+				--	enemy.incx = -math.abs(enemy.incx)
+				--	enemy.incy = -math.abs(enemy.incy)
 
 
 				end
@@ -729,16 +735,19 @@ function hitDetection()
 		end
 
 
+
 		if(enemy.x - enemy.radius - 5 <= 0 or enemy.x + enemy.radius + 5 >= love.window.getWidth()) then
 
 			enemy.incx = -enemy.incx 
 		
-		if(planet.x < 0) then
-			enemy.x = 0 + enemy.radius + 5
+		if(enemy.x - enemy.radius - 5 <= 0) then
+			enemy.incx = math.abs(enemy.incx)
+			--enemy.x = enemy.radius + 5
 		end
 
-		if(enemy.x > love.window.getWidth()) then
-			enemy.x = love.window.getWidth() - enemy.radius - 5
+		if(enemy.x + enemy.radius + 5 >= love.window.getWidth()) then
+			enemy.incx = -math.abs(enemy.incx)
+			--enemy.x = love.window.getWidth() - enemy.radius - 5
 		end
 
 
@@ -747,30 +756,46 @@ function hitDetection()
 
 		if(enemy.y - enemy.radius - 5 <= 0 or enemy.y + enemy.radius + 5 >= love.window.getHeight()) then
 
-			enemy.incy = -enemy.incy
+			--enemy.incy = -enemy.incy
 
-			if(enemy.y < 0) then
-				enemy.y = 0 + enemy.radius + 5
+			if(enemy.y - enemy.radius - 5 <= 0) then
+				enemy.incy = math.abs(enemy.incy)
+				--enemy.y = 0 + enemy.radius + 5
 			end
 
-			if(enemy.y > love.window.getHeight()) then
-				enemy.y = love.window.getHeight() - enemy.radius - 5
+			if(enemy.y + enemy.radius + 5  >= love.window.getHeight()) then
+				enemy.incy = -math.abs(enemy.incy)
+				--enemy.y = love.window.getHeight() - enemy.radius - 5
 			end	
 		end
+
+		if(enemy.incx == 0) then
+			enemy.incx = 5
+		end
+		if(enemy.incy == 0) then
+			enemy.incy = 5
+		end
+
+
 	end
+
+
+
 
 	--bounce planet off edge of screen
 
-	if(planet.x - planet.radius - 5 < 0 or planet.x  + planet.radius + 5> love.window.getWidth()) then
+	if(planet.x - planet.radius - 5 < 0 or planet.x + planet.radius + 5 > love.window.getWidth()) then
 
-		planet.incx = - planet.incx
+		--planet.incx = - planet.incx
 		bouncesound:play()
 
-		if(planet.x < 0) then
-			planet.x = 0 + planet.radius + 5
+		if(planet.x - planet.radius - 5 <= 0) then
+			planet.incx = math.abs(planet.incx)
+			--planet.x = 0 + planet.radius + 5
 		end 
-		if(planet.x > love.window.getWidth()) then
-			planet.x = love.window.getWidth() - planet.radius - 5
+		if(planet.x + planet.radius + 5 >= love.window.getWidth()) then
+			planet.incx = -math.abs(planet.incx)
+			--planet.x = love.window.getWidth() - planet.radius - 5
 		end
 
 
@@ -779,17 +804,19 @@ function hitDetection()
 
 	if(planet.y - planet.radius - 5 <= 0 or planet.y + planet.radius + 5> love.window.getHeight()) then
 
-		planet.incy = - planet.incy
+		
 		bouncesound:play()
+		--planet.incy = -planet.incy
 
 
-
-		if(planet.y < 0) then
-			planet.y = 0 + planet.radius + 5
+		if(planet.y - planet.radius - 5 <= 0) then
+			planet.incy =  math.abs(planet.incy) --Force positive
+			--planet.y = 0 + planet.radius + 5
 		end
 
-		if(planet.y > love.window.getHeight()) then
-			planet.y = love.window.getHeight() - planet.radius - 5
+		if(planet.y + planet.radius + 5 >= love.window.getHeight()) then
+			planet.incy = - math.abs(planet.incy) -- force negative
+			--planet.y = love.window.getHeight() - planet.radius - 5
 		end
 
 	end
@@ -802,7 +829,6 @@ function sfxanim()
 
 	--Take in dt
 	--Update every second rather than every frame
-
 
 			--Default position
 
