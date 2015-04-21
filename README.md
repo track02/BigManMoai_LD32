@@ -2,7 +2,7 @@
 Ludum Dare 32 - Jam
 
 
-- Download the LD32-Distrib folder and run the LD32.exe inside to play.
+- Download the zip and run the LD32.exe inside the LD32-Distrib folder to play.
 
 - Can also run by dragging the Game folder over (a shortcut to) love.exe (found in LOVE folder)
 
